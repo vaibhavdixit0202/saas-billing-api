@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 @SpringBootApplication
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController // Ye banata hai isko ek Web API
 public class SaasBillingApiApplication {
 
@@ -45,23 +46,26 @@ public class SaasBillingApiApplication {
 		// Jo naya data bahar se aayega, usko direct Postgres godaam mein save kar dega
 		return userRepository.save(nayaUser);
 	}
-	// 5. Kisi existing user ka data UPDATE karne ke liye (Plan Upgrade)
-	@PutMapping("/api/users/{id}")
-	public User updateUserPlan(@PathVariable Long id, @RequestBody User nayaData) {
-		// 1. Pehle id ke hisaab se purane user ko godaam mein dhundo
-		User puranaUser = userRepository.findById(id).get();
-
-		// 2. Uska plan naye data se update kar do
-		puranaUser.setActivePlan(nayaData.getActivePlan());
-
-		// 3. Wapas godaam mein save kar do
-		return userRepository.save(puranaUser);
-	}
 	// 6. User ko godaam se hamesha ke liye hatana (Delete)
 	@DeleteMapping("/api/users/{id}")
 	public String deleteUser(@PathVariable Long id) {
 		// Munshi ko bolo is id wale user ko delete kar de
 		userRepository.deleteById(id);
 		return "User jiska ID " + id + " tha, wo successfully delete ho gaya!";
+	}
+
+	@PutMapping("/api/users/{id}")
+	public User updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+		// Safely fetch the existing user; throw a runtime exception if the record is absent
+		User existingUser = userRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+		// Update the entity fields with the incoming request payload
+		existingUser.setName(userDetails.getName());
+		existingUser.setEmail(userDetails.getEmail());
+		existingUser.setActivePlan(userDetails.getActivePlan());
+
+		// Persist the updated entity state to the PostgreSQL database
+		return userRepository.save(existingUser);
 	}
 }
