@@ -21,7 +21,8 @@ public class SaasBillingApiApplication {
 // 1. Apne Database Manager (Munshi) ko class mein bulaya
 	@Autowired
 	private UserRepository userRepository;
-
+	@Autowired
+	private EmailService emailService;
 	// 2. Database mein data SAVE karne ka endpoint (Test karne ke liye)
 	@GetMapping("/api/add")
 	public String addTestUser() {
@@ -40,11 +41,22 @@ public class SaasBillingApiApplication {
 		// Munshi ko bola godaam se saara data nikal kar laao
 		return userRepository.findAll();
 	}
-	// 4. Asli Professional Tarika (Frontend/Bahar se data receive karne ke liye)
+	/**
+	 * Creates a new user in the system and triggers a welcome email notification.
+	 *
+	 * @param nayaUser The user payload from the incoming HTTP request.
+	 * @return The persisted User entity.
+	 */
 	@PostMapping("/api/users")
 	public User createRealUser(@RequestBody User nayaUser) {
-		// Jo naya data bahar se aayega, usko direct Postgres godaam mein save kar dega
-		return userRepository.save(nayaUser);
+
+		// Persist the user data to PostgreSQL
+		User savedUser = userRepository.save(nayaUser);
+
+		// Dispatch welcome email notification to the newly registered user
+		emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName());
+
+		return savedUser;
 	}
 	// 6. User ko godaam se hamesha ke liye hatana (Delete)
 	@DeleteMapping("/api/users/{id}")
